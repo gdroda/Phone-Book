@@ -11,16 +11,16 @@ namespace PhoneBook
 
         public string DbPath { get; }
 
-        /*
-        public PhoneBookContext()
-        {
-            // @"Server=(localdb)\\mssqllocaldb;Database=master;Trusted_Connection=True;Integrated security=SSPI);   ConnectRetryCount=0";
-
-        }*/
-
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseSqlServer(@"Server=(localdb)\MSSQLLocalDB;Database=Phonebook;Trusted_Connection=True;Integrated security=SSPI;ConnectRetryCount=0");
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Contact>().HasData(
+                new Contact { ContactId = 1, Name = "George", PhoneNumber = "1234567890", EMail = "seededmail@mail.com"}
+                );
         }
     }
 
