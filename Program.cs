@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Net;
 using System.Net.Mail;
 
@@ -21,8 +22,8 @@ namespace PhoneBook
                 Console.WriteLine("~ Phone Book ~\n\n");
                 Console.WriteLine("1. Show Contacts");
                 Console.WriteLine("2. Add New Contacts");
-                Console.WriteLine("3. Exit");
-                Console.WriteLine("4. Send Test email");
+                Console.WriteLine("3. Delete Contacts");
+                Console.WriteLine("4. Exit");
                 string? input = Console.ReadLine();
 
                 switch (input)
@@ -34,10 +35,10 @@ namespace PhoneBook
                         AddNewContact();
                         break;
                     case "3":
-                        return;
-                    case "4":
-                        SendMail();
+                        DeleteContacts();
                         break;
+                    case "4":
+                        return;
                     default:
                         continue;
                 }
@@ -51,14 +52,24 @@ namespace PhoneBook
             {
                 Console.Write("Enter name: ");
                 var name = Console.ReadLine();
-                Console.Write("Enter Phone Number: ");
-                var phoneNumber = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    Console.WriteLine("Name can't be empty, please try again.\nPress ENTER to return");
+                    Console.ReadLine();
+                    return;
+                }
+
+                Console.Write("Enter Phone number: ");
+                string? phoneNumber = ValidatePhoneNumber(Console.ReadLine());
+                if (phoneNumber == null) return;
+                    
                 Console.Write("Enter E-mail: ");
-                var eMail = Console.ReadLine();
+                var eMail = ValidateEmail(Console.ReadLine());
+                if (eMail == null) return;
 
                 var contact = new Contact { Name = name, PhoneNumber = phoneNumber, EMail = eMail };
                 _db.Contacts.Add(contact);
-                _db.SaveChangesAsync();
+                _db.SaveChanges();
 
                 Console.WriteLine("\n\nPress ENTER to return");
                 Console.ReadLine();
@@ -69,7 +80,74 @@ namespace PhoneBook
                 throw;
             }
         }
-        
+
+        static string? ValidatePhoneNumber(string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                Console.WriteLine("\nPhone number can't be empty, please try again.\nPress ENTER to return");
+                Console.ReadLine();
+                return null;
+            }
+            else
+            {
+                var phoneCleaned = phoneNumber.Trim();
+                bool isValid = phoneCleaned.Length == 10 && phoneCleaned.All(char.IsDigit);
+
+                if (!isValid)
+                {
+                    Console.WriteLine("\nPhone number has to be 10 numeric digits only.\nPress Enter to return");
+                    Console.ReadLine();
+                    return null;
+                }
+                return phoneCleaned;
+            }
+        }
+
+        static string? ValidateEmail(string eMail)
+        {
+            if (string.IsNullOrWhiteSpace(eMail))
+            {
+                Console.WriteLine("\nE-mail can't be empty, please try again.\nPress ENTER to return");
+                Console.ReadLine();
+                return null;
+            }
+            else
+            {
+                var eMailCleaned = eMail.Trim();
+                bool isValid = eMailCleaned.Count(c => c == '@') == 1;
+
+                if (!isValid)
+                {
+                    Console.WriteLine("\nWrong E-mail format.\nPress Enter to return");
+                    Console.ReadLine();
+                    return null;
+                }
+                return eMailCleaned;
+            }
+        }
+
+        static void DeleteContacts()
+        {
+            Console.Clear();
+            try
+            {
+                Console.Write("Enter name to delete: ");
+                string? input = Console.ReadLine();
+
+                _db.Contacts.Where(p => p.Name == input).ExecuteDelete();
+                _db.SaveChanges();
+
+                Console.WriteLine("\nPress ENTER to return");
+                Console.ReadLine();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error...: {ex}");
+                throw;
+            }
+        }
+
         static void PrintContacts()
         {
             Console.Clear();
@@ -96,37 +174,5 @@ namespace PhoneBook
             }
         }
 
-        static void SendMail()
-        {
-            string? addr = "";
-            string? pw = "";
-
-            string? mailFrom = "";
-            string? mailTo = "";
-
-            try
-            {
-                MailMessage mail = new();
-
-                mail.From = new MailAddress(mailFrom);
-                mail.To.Add(mailTo);
-                mail.Subject = "Test email!";
-                mail.Body = "Hello, this is a test!";
-
-                SmtpClient smtp = new SmtpClient("smtp.gmail.com", 465); // gmail doesnt work anymore with less secure apps, to be changed.
-                smtp.Credentials = new NetworkCredential($"{addr}", $"{pw}");
-                smtp.EnableSsl = true;
-
-                smtp.Send(mail);
-                Console.WriteLine("\nE-mail sent successfully");
-                Console.WriteLine("\nPress ENTER to return");
-                Console.ReadLine();
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine($"Error: {ex.Message}");
-                throw;
-            }
-        }
     }
 }
